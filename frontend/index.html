@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI CI/CD Reviewer</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #080c10;
+      --surface: #0e1419;
+      --border: #1e2730;
+      --accent: #00d4ff;
+      --green: #00ff88;
+      --yellow: #ffcc00;
+      --red: #ff4455;
+      --text: #cdd6e0;
+      --muted: #4a5568;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 40px 20px;
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(0,212,255,0.04) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(0,255,136,0.03) 0%, transparent 60%);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+      animation: fadeDown 0.6s ease both;
+    }
+
+    .header .tag {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent);
+      border: 1px solid rgba(0,212,255,0.3);
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .header h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.1;
+      margin-bottom: 12px;
+    }
+
+    .header h1 span { color: var(--accent); }
+
+    .header p {
+      color: var(--muted);
+      font-size: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .container { max-width: 860px; margin: 0 auto; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .card-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--accent);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 220px;
+      background: var(--bg);
+      color: #e2e8f0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      resize: vertical;
+      outline: none;
+      line-height: 1.6;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus { border-color: var(--accent); }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .btn-sample {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-sample:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-review {
+      flex: 1;
+      background: linear-gradient(135deg, #005f80, #007a9e);
+      color: #fff;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-review:hover { background: linear-gradient(135deg, #0077a0, #009bbf); transform: translateY(-1px); }
+    .btn-review:disabled { background: #1a2230; color: var(--muted); cursor: not-allowed; transform: none; }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 14px;
+      text-align: center;
+    }
+
+    .stat .num {
+      font-size: 2.2rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .stat .lbl {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* Issue Cards */
+    .issue {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 10px;
+      border-left: 3px solid;
+      transition: transform 0.15s, border-color 0.15s;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .issue:hover { transform: translateX(4px); }
+    .issue.Critical   { border-left-color: var(--red); }
+    .issue.Warning    { border-left-color: var(--yellow); }
+    .issue.Suggestion { border-left-color: var(--green); }
+
+    .issue-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .badge.Critical   { background: rgba(255,68,85,0.12); color: var(--red); border: 1px solid rgba(255,68,85,0.25); }
+    .badge.Warning    { background: rgba(255,204,0,0.1);  color: var(--yellow); border: 1px solid rgba(255,204,0,0.25); }
+    .badge.Suggestion { background: rgba(0,255,136,0.08); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+    .badge.cat        { background: rgba(0,212,255,0.08); color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
+
+    .issue-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #e2e8f0;
+    }
+
+    .issue-fix {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      line-height: 1.5;
+    }
+
+    .issue-fix .fix-label {
+      color: var(--green);
+      font-weight: 600;
+      margin-right: 6px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 50px 20px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    .success {
+      text-align: center;
+      padding: 40px;
+      color: var(--green);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+    }
+
+    .section-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="tag">⚡ AI-Powered DevOps Tool</div>
+    <h1>CI/CD Pipeline <span>Reviewer</span></h1>
+    <p>// paste your yaml → get instant security & performance fixes</p>
+  </div>
+
+  <div class="container">
+
+    <div class="card">
+      <div class="card-label">// your pipeline yaml</div>
+      <textarea id="yaml-input" placeholder="name: My Pipeline
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm install
+      - run: npm run build"></textarea>
+      <div class="btn-row">
+        <button class="btn-sample" onclick="loadSample()">📋 Load Bad Pipeline Sample</button>
+        <button class="btn-review" id="review-btn" onclick="reviewPipeline()">🔍 Review Pipeline</button>
+      </div>
+    </div>
+
+    <div id="results"></div>
+
+  </div>
+
+  <script>
+    const BACKEND = "http://127.0.0.1:5000";
+
+    const sampleYaml = `name: Bad CI Pipeline
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Dependencies
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Deploy
+        env:
+          API_KEY: hardcoded-secret-123
+          DB_PASS: mypassword456
+        run: echo "deploying to production"`;
+
+    function loadSample() {
+      document.getElementById('yaml-input').value = sampleYaml;
+    }
+
+    async function reviewPipeline() {
+      const yaml = document.getElementById('yaml-input').value.trim();
+      const resultsDiv = document.getElementById('results');
+      const btn = document.getElementById('review-btn');
+
+      if (!yaml) {
+        alert('Please paste a YAML pipeline first!');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Analyzing...';
+
+      resultsDiv.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>AI is reviewing your pipeline...</p>
+        </div>`;
+
+      try {
+        const response = await fetch(BACKEND + "/review", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ yaml: yaml })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+          resultsDiv.innerHTML = '<div class="loading" style="color:#ff4455">Error: ' + data.error + '</div>';
+          return;
+        }
+
+        const issues = data.review;
+
+        if (!issues || issues.length === 0) {
+          resultsDiv.innerHTML = '<div class="success">✅ No issues found! Your pipeline looks clean.</div>';
+          return;
+        }
+
+        const critical   = issues.filter(function(i) { return i.severity === 'Critical'; }).length;
+        const warning    = issues.filter(function(i) { return i.severity === 'Warning'; }).length;
+        const suggestion = issues.filter(function(i) { return i.severity === 'Suggestion'; }).length;
+
+        const emoji = { Critical: '🔴', Warning: '🟡', Suggestion: '🟢' };
+
+        let statsHtml = '<div class="stats">'
+          + '<div class="stat"><div class="num" style="color:#ff4455">' + critical + '</div><div class="lbl">Critical</div></div>'
+          + '<div class="stat"><div class="num" style="color:#ffcc00">' + warning + '</div><div class="lbl">Warnings</div></div>'
+          + '<div class="stat"><div class="num" style="color:#00ff88">' + suggestion + '</div><div class="lbl">Suggestions</div></div>'
+          + '<div class="stat"><div class="num" style="color:#00d4ff">' + issues.length + '</div><div class="lbl">Total</div></div>'
+          + '</div>';
+
+        let cardsHtml = '<div class="section-title">// review results</div>';
+        for (let i = 0; i < issues.length; i++) {
+          const issue = issues[i];
+          cardsHtml += '<div class="issue ' + issue.severity + '">'
+            + '<div class="issue-top">'
+            + '<span>' + (emoji[issue.severity] || '') + '</span>'
+            + '<span class="badge ' + issue.severity + '">' + issue.severity + '</span>'
+            + '<span class="badge cat">' + issue.category + '</span>'
+            + '<span class="issue-title">' + issue.issue + '</span>'
+            + '</div>'
+            + '<div class="issue-fix"><span class="fix-label">FIX:</span>' + issue.fix + '</div>'
+            + '</div>';
+        }
+
+        resultsDiv.innerHTML = statsHtml + cardsHtml;
+
+      } catch (err) {
+        resultsDiv.innerHTML = '<div class="loading" style="color:#ff4455">Cannot connect to backend. Make sure Flask is running on port 5000!</div>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔍 Review Pipeline';
+      }
+    }
+  </script>
+
+</body>
+</html>
